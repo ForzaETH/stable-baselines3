@@ -128,7 +128,7 @@ Multiprocessing: Unleashing the Power of Vectorized Environments
 
       :param env_id: the environment ID
       :param num_env: the number of environments you wish to have in subprocesses
-      :param seed: the initial seed for RNG
+      :param seed: the inital seed for RNG
       :param rank: index of the subprocess
       """
       def _init():
@@ -179,9 +179,9 @@ Multiprocessing with off-policy algorithms
 
   vec_env = make_vec_env("Pendulum-v0", n_envs=4, seed=0)
 
-  # We collect 4 transitions per call to `env.step()`
-  # and performs 2 gradient steps per call to `env.step()`
-  # if gradient_steps=-1, then we would do 4 gradients steps per call to `env.step()`
+  # We collect 4 transitions per call to `ènv.step()`
+  # and performs 2 gradient steps per call to `ènv.step()`
+  # if gradient_steps=-1, then we would do 4 gradients steps per call to `ènv.step()`
   model = SAC("MlpPolicy", vec_env, train_freq=1, gradient_steps=2, verbose=1)
   model.learn(total_timesteps=10_000)
 
@@ -364,7 +364,7 @@ Atari Games
 
 Training a RL agent on Atari games is straightforward thanks to ``make_atari_env`` helper function.
 It will do `all the preprocessing <https://danieltakeshi.github.io/2016/11/25/frame-skipping-and-preprocessing-for-deep-q-networks-on-atari-2600-games/>`_
-and multiprocessing for you. To install the Atari environments, run the command ``pip install gymnasium[atari,accept-rom-license]`` to install the Atari environments and ROMs, or install Stable Baselines3 with ``pip install stable-baselines3[extra]`` to install this and other optional dependencies.
+and multiprocessing for you. To install the Atari environments, run the command ``pip install gym[atari, accept-rom-license]`` to install the Atari environments and ROMs, or install Stable Baselines3 with ``pip install stable-baselines3[extra]`` to install this and other optional dependencies.
 
 .. image:: ../_static/img/colab-badge.svg
    :target: https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/sb3/atari_games.ipynb
@@ -436,7 +436,7 @@ will compute a running average and standard deviation of input features (it can 
   log_dir = "/tmp/"
   model.save(log_dir + "ppo_halfcheetah")
   stats_path = os.path.join(log_dir, "vec_normalize.pkl")
-  vec_env.save(stats_path)
+  env.save(stats_path)
 
   # To demonstrate loading
   del model, vec_env

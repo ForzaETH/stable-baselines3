@@ -1,5 +1,4 @@
 """Common aliases for type hints"""
-
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, NamedTuple, Optional, Protocol, SupportsFloat, Tuple, Union
 
@@ -24,7 +23,7 @@ MaybeCallback = Union[None, Callable, List["BaseCallback"], "BaseCallback"]
 PyTorchObs = Union[th.Tensor, TensorDict]
 
 # A schedule takes the remaining progress as input
-# and outputs a scalar (e.g. learning rate, clip range, ...)
+# and ouputs a scalar (e.g. learning rate, clip range, ...)
 Schedule = Callable[[float], float]
 
 
