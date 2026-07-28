@@ -49,6 +49,7 @@ def make_vec_env(
     vec_env_kwargs: dict[str, Any] | None = None,
     monitor_kwargs: dict[str, Any] | None = None,
     wrapper_kwargs: dict[str, Any] | None = None,
+    render_mode: str | None = "rgb_array",
 ) -> VecEnv:
     """
     Create a wrapped, monitored ``VecEnv``.
@@ -72,6 +73,8 @@ def make_vec_env(
     :param vec_env_kwargs: Keyword arguments to pass to the ``VecEnv`` class constructor.
     :param monitor_kwargs: Keyword arguments to pass to the ``Monitor`` class constructor.
     :param wrapper_kwargs: Keyword arguments to pass to the ``Wrapper`` class constructor.
+    :param render_mode: Render mode passed to ``gym.make`` when ``env_id`` is a string.
+        Defaults to ``"rgb_array"``; set to ``None`` or ``"human"`` as needed.
     :return: The wrapped environment
     """
     env_kwargs = env_kwargs or {}
@@ -89,7 +92,7 @@ def make_vec_env(
 
             if isinstance(env_id, str):
                 # if the render mode was not specified, we set it to `rgb_array` as default.
-                kwargs = {"render_mode": "rgb_array"}
+                kwargs = {"render_mode": render_mode}
                 kwargs.update(env_kwargs)
                 try:
                     env = gym.make(env_id, **kwargs)  # type: ignore[arg-type]

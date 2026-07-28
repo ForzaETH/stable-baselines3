@@ -137,6 +137,8 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         self.replay_buffer_class = replay_buffer_class
         self.replay_buffer_kwargs = replay_buffer_kwargs or {}
         self.n_steps = n_steps
+        # Track last dumped step to avoid duplicate log dumps at the same timestep
+        self.prev_num_timesteps = 0
 
         # Save train freq parameter, will be converted later to TrainFreq object
         self.train_freq = train_freq
@@ -332,6 +334,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         assert isinstance(self.train_freq, TrainFreq)  # check done in _setup_learn()
 
         while self.num_timesteps < total_timesteps:
+            rollout_start = time.time()
             rollout = self.collect_rollouts(
                 self.env,
                 train_freq=self.train_freq,
@@ -341,6 +344,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                 replay_buffer=self.replay_buffer,
                 log_interval=log_interval,
             )
+            self.logger.record("time/rollout", time.time() - rollout_start)
 
             if not rollout.continue_training:
                 break
@@ -436,7 +440,10 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         if len(self.ep_success_buffer) > 0:
             self.logger.record("rollout/success_rate", safe_mean(self.ep_success_buffer))
         # Pass the number of timesteps for tensorboard
-        self.logger.dump(step=self.num_timesteps)
+        # Skip duplicate dumps at the same timestep (avoids double rows at fixed num_timesteps)
+        if self.num_timesteps > self.prev_num_timesteps:
+            self.logger.dump(step=self.num_timesteps)
+            self.prev_num_timesteps = self.num_timesteps
 
     def _on_step(self) -> None:
         """

@@ -1,3 +1,5 @@
+import sys
+import time
 from typing import Any, ClassVar, TypeVar
 
 import numpy as np
@@ -60,6 +62,8 @@ class SAC(OffPolicyAlgorithm):
     :param target_update_interval: update the target network every ``target_network_update_freq``
         gradient steps.
     :param target_entropy: target entropy when learning ``ent_coef`` (``ent_coef = 'auto'``)
+    :param output_reg_matrix: Optional ``(action_dim, action_dim)`` matrix ``M`` adding a quadratic
+        penalty ``aᵀ M a`` on the sampled action to the actor loss. ``None`` disables it.
     :param use_sde: Whether to use generalized State Dependent Exploration (gSDE)
         instead of action noise exploration (default: False)
     :param sde_sample_freq: Sample a new noise matrix every n steps when using gSDE
@@ -108,6 +112,7 @@ class SAC(OffPolicyAlgorithm):
         ent_coef: str | float = "auto",
         target_update_interval: int = 1,
         target_entropy: str | float = "auto",
+        output_reg_matrix: np.ndarray | None = None,
         use_sde: bool = False,
         sde_sample_freq: int = -1,
         use_sde_at_warmup: bool = False,
@@ -155,6 +160,11 @@ class SAC(OffPolicyAlgorithm):
         self.ent_coef = ent_coef
         self.target_update_interval = target_update_interval
         self.ent_coef_optimizer: th.optim.Adam | None = None
+
+        # Optional quadratic action-output regularization: adds a^T M a to the actor loss
+        self.output_reg_mat: th.Tensor | None = None
+        if output_reg_matrix is not None:
+            self.output_reg_mat = th.as_tensor(output_reg_matrix, dtype=th.float32, device=self.device)
 
         if _init_setup_model:
             self._setup_model()
@@ -278,7 +288,13 @@ class SAC(OffPolicyAlgorithm):
             # Min over all critic networks
             q_values_pi = th.cat(self.critic(replay_data.observations, actions_pi), dim=1)
             min_qf_pi, _ = th.min(q_values_pi, dim=1, keepdim=True)
-            actor_loss = (ent_coef * log_prob - min_qf_pi).mean()
+            if self.output_reg_mat is None:
+                actor_loss = (ent_coef * log_prob - min_qf_pi).mean()
+            else:
+                # Quadratic penalty on the sampled action: a^T M a
+                output_reg_loss = th.matmul(actions_pi, self.output_reg_mat)
+                output_reg_loss = th.einsum("ij,ij->i", output_reg_loss, actions_pi)
+                actor_loss = (ent_coef * log_prob - min_qf_pi + output_reg_loss).mean()
             actor_losses.append(actor_loss.item())
 
             # Optimize the actor
@@ -294,12 +310,15 @@ class SAC(OffPolicyAlgorithm):
 
         self._n_updates += gradient_steps
 
+        time_elapsed = max((time.time_ns() - self.start_time) / 1e9, sys.float_info.epsilon)
+        updates_ps = int(self._n_updates / time_elapsed)
         self.logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
         self.logger.record("train/ent_coef", np.mean(ent_coefs))
         self.logger.record("train/actor_loss", np.mean(actor_losses))
         self.logger.record("train/critic_loss", np.mean(critic_losses))
         if len(ent_coef_losses) > 0:
             self.logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
+        self.logger.record("time/updates_per_second", updates_ps)
 
     def learn(
         self: SelfSAC,

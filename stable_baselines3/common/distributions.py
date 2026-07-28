@@ -238,7 +238,8 @@ class SquashedDiagGaussianDistribution(DiagGaussianDistribution):
         log_prob = super().log_prob(gaussian_actions)
         # Squash correction (from original SAC implementation)
         # this comes from the fact that tanh is bijective and differentiable
-        log_prob -= th.sum(th.log(1 - actions**2 + self.epsilon), dim=1)
+        # Clamp the argument of the log to avoid -inf / NaN when |action| -> 1
+        log_prob -= th.sum(th.log(th.clamp(1 - actions**2 + self.epsilon, min=1e-6)), dim=1)
         return log_prob
 
     def entropy(self) -> th.Tensor | None:
